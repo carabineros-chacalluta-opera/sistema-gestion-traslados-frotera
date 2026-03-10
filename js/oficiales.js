@@ -41,21 +41,21 @@ const Oficiales = {
       const colorGrado= pctGrado >= 90 ? 'rojo' : pctGrado >= 70 ? 'amarillo' : 'verde';
 
       return `<tr>
-        <td><div style="font-weight:600;">${o.nombre}</div><div style="font-size:0.75rem;color:#90A4AE;">${o.rut||''}</div></td>
-        <td>${badgeGrado(o.grado)}</td>
-        <td style="max-width:140px;font-size:0.82rem;">${c?c.nombre:'—'}</td>
-        <td style="font-size:0.82rem;">${o.cargo_actual?CARGOS_LABEL[o.cargo_actual]:'—'}</td>
-        <td>
+        <td data-label="Nombre"><div style="font-weight:600;">${o.nombre}</div><div style="font-size:0.75rem;color:#90A4AE;">${o.rut||''}</div></td>
+        <td data-label="Grado">${badgeGrado(o.grado)}</td>
+        <td data-label="Cuartel" style="max-width:140px;font-size:0.82rem;">${c?c.nombre:'—'}</td>
+        <td data-label="Cargo" style="font-size:0.82rem;">${o.cargo_actual?CARGOS_LABEL[o.cargo_actual]:'—'}</td>
+        <td data-label="T. Cuartel">
           <div class="progress-wrap" style="width:90px;"><div class="progress-bar progress-${colorRot}" style="width:${pctRot}%"></div></div>
           <div class="progress-label">${tiempoCuartel.texto} / ${limiteRot}a</div>
         </td>
-        <td>
+        <td data-label="T. Grado">
           <div class="progress-wrap" style="width:90px;"><div class="progress-bar progress-${colorGrado}" style="width:${pctGrado}%"></div></div>
           <div class="progress-label">${tiempoGrado.texto}</div>
         </td>
-        <td><span class="badge ${o.especialidad_mof?'badge-verde':'badge-rojo'}">${o.especialidad_mof?'✓ M o F':'✗ Sin esp.'}</span></td>
-        <td><span class="badge ${o.estado==='ACTIVO'?'badge-verde':o.estado==='PERFECCIONAMIENTO'?'badge-amarillo':'badge-gris'}">${o.estado}</span></td>
-        <td>
+        <td data-label="Especialidad"><span class="badge ${o.especialidad_mof?'badge-verde':'badge-rojo'}">${o.especialidad_mof?'✓ M o F':'✗ Sin esp.'}</span></td>
+        <td data-label="Estado"><span class="badge ${o.estado==='ACTIVO'?'badge-verde':o.estado==='PERFECCIONAMIENTO'?'badge-amarillo':'badge-gris'}">${o.estado}</span></td>
+        <td data-label="Acciones">
           <div style="display:flex;gap:4px;">
             <button class="btn btn-outline btn-sm" onclick="Oficiales.verFicha('${o.id}')">👁 Ver</button>
             <button class="btn btn-ghost btn-sm" onclick="Oficiales.abrirEditar('${o.id}')">✏️</button>
