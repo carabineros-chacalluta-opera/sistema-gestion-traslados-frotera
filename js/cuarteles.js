@@ -51,23 +51,23 @@ const Cuarteles = {
       const criticidadColor = c.criticidad==='ALTA'?'rojo':c.criticidad==='MEDIA'?'amarillo':'verde';
 
       return `<tr>
-        <td style="font-weight:600;font-size:0.85rem;">${c.nombre}</td>
-        <td style="font-size:0.8rem;">${c.region}</td>
-        <td><span class="badge badge-gris">${c.tipo}</span></td>
-        <td><span class="badge badge-${criticidadColor}">${c.criticidad}</span></td>
-        <td style="text-align:center;">
+        <td data-label="Cuartel" style="font-weight:600;font-size:0.85rem;">${c.nombre}</td>
+        <td data-label="Región" style="font-size:0.8rem;">${c.region}</td>
+        <td data-label="Tipo"><span class="badge badge-gris">${c.tipo}</span></td>
+        <td data-label="Criticidad"><span class="badge badge-${criticidadColor}">${c.criticidad}</span></td>
+        <td data-label="Zona Trat." style="text-align:center;">
           <span style="font-weight:700;color:${Utils.colorZona(c.zona_trat_pct)};">${c.zona_trat_pct}%</span>
           <div style="font-size:0.7rem;color:#90A4AE;">Rot. ${rotRegla}a</div>
         </td>
-        <td style="min-width:110px;">
+        <td data-label="Cobertura" style="min-width:110px;">
           <div class="progress-wrap"><div class="progress-bar progress-${colorBarra}" style="width:${pct}%"></div></div>
           <div class="progress-label">${asignados.length}/${optimo}${deficit>0?` <b style="color:#C62828;">(−${deficit})</b>`:''}</div>
         </td>
-        <td style="text-align:center;">
+        <td data-label="Especialistas" style="text-align:center;">
           <span class="${especialistas.length === asignados.length && asignados.length>0?'badge badge-verde':'badge badge-rojo'}">${especialistas.length}/${asignados.length}</span>
         </td>
-        <td style="font-size:0.8rem;">${this.dotacionHtml(c)}</td>
-        <td style="text-align:center;">
+        <td data-label="Dotación" style="font-size:0.8rem;">${this.dotacionHtml(c)}</td>
+        <td data-label="Acciones" style="text-align:center;">
           <div style="display:flex;gap:4px;justify-content:center;">
             <button class="btn btn-outline btn-sm" onclick="Cuarteles.verDetalle('${c.id}')">👁</button>
             <button class="btn btn-ghost btn-sm" onclick="Cuarteles.abrirEditar('${c.id}')">✏️</button>
