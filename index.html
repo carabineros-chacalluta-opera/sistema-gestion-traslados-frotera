@@ -30,7 +30,7 @@
       <div class="nav-section-title">Principal</div>
       <div class="nav-item active" data-page="dashboard" onclick="navegarA('dashboard')">
         <span class="nav-icon">🏠</span><span class="nav-label">Dashboard</span>
-        <span class="nav-badge" id="alertas-badge" style="display:none;background:#C62828;color:white;font-size:0.7rem;padding:2px 6px;border-radius:10px;font-weight:700;"></span>
+        <span class="nav-badge" id="alertas-badge" style="display:none;"></span>
       </div>
       <div class="nav-item" data-page="mapa" onclick="navegarA('mapa')">
         <span class="nav-icon">🗺️</span><span class="nav-label">Mapa Operativo</span>
@@ -67,12 +67,18 @@
   <!-- MAIN -->
   <main class="main-content">
     <div class="topbar">
-      <div class="topbar-title" id="topbar-title">DASHBOARD</div>
+      <div class="topbar-left">
+        <button class="hamburger-btn" id="hamburger-btn" aria-label="Abrir menú" onclick="toggleSidebar()">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="topbar-title" id="topbar-title">DASHBOARD</div>
+      </div>
       <div class="topbar-right">
         <div class="topbar-fecha" id="topbar-fecha"></div>
-        <button class="topbar-alerta-btn" onclick="navegarA('fiscalizador')">📊 Fiscalizador</button>
+        <button class="topbar-alerta-btn" onclick="navegarA('fiscalizador')">📊 <span class="topbar-btn-label">Fiscalizador</span></button>
       </div>
     </div>
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
 
     <!-- ════ DASHBOARD ════ -->
     <div class="page active" id="page-dashboard">
@@ -96,13 +102,13 @@
               <button class="btn btn-sm btn-ghost" data-filtro-mapa="completo">Completos</button>
             </div>
           </div>
-          <div id="mapa-dashboard" style="height:420px;border-radius:8px;"></div>
+          <div id="mapa" style="height:420px;border-radius:8px;"></div>
           <div style="display:flex;gap:16px;margin-top:10px;font-size:0.78rem;color:#546E7A;">
             <span>🔴 Crítico/Déficit</span><span>🟡 Parcial</span><span>🟢 Completo</span><span>⚪ Sin datos</span>
           </div>
         </div>
         <div class="card">
-          <div class="card-header"><div class="card-title">🚨 Alertas</div><span class="badge badge-rojo" id="contador-alertas"></span></div>
+          <div class="card-header"><div class="card-title">🚨 Alertas</div><span class="badge badge-rojo" id="contador-alertas">0</span></div>
           <div id="alertas-lista" style="max-height:420px;overflow-y:auto;"></div>
         </div>
       </div>
@@ -155,7 +161,7 @@
           </div>
         </div>
         <div class="tabla-wrapper">
-          <table class="tabla">
+          <table class="tabla tabla-mobile-cards">
             <thead><tr>
               <th>Cuartel</th><th>Región</th><th>Tipo</th><th>Criticidad</th>
               <th>Zona Trat.</th><th>Cobertura</th><th>Especialistas</th><th>Dotación</th><th>Acciones</th>
@@ -179,7 +185,7 @@
           </div>
         </div>
         <div class="tabla-wrapper">
-          <table class="tabla">
+          <table class="tabla tabla-mobile-cards">
             <thead><tr>
               <th>Nombre</th><th>Grado</th><th>Cuartel</th><th>Cargo</th>
               <th>Tiempo en Cuartel</th><th>Tiempo en Grado</th><th>Especialidad</th><th>Estado</th><th>Acciones</th>
@@ -525,20 +531,40 @@
 <script src="js/simulador.js"></script>
 <script src="js/planes.js"></script>
 
-<script>
 // ── INIT ─────────────────────────────────────────────────────────
+function setBottomActive(el) {
+  document.querySelectorAll('.bottom-nav-item').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+}
+
+function toggleSidebar() {
+  const sidebar = document.querySelector('.sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  sidebar.classList.toggle('open');
+  overlay.classList.toggle('open');
+  document.body.classList.toggle('sidebar-open');
+}
+
+function closeSidebarMobile() {
+  if (window.innerWidth <= 768) {
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    sidebar.classList.remove('open');
+    overlay.classList.remove('open');
+    document.body.classList.remove('sidebar-open');
+  }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   actualizarFecha();
   setInterval(actualizarFecha, 60000);
-
-  // CORRECCIÓN #3: Mapa del dashboard usa su propio div y su propia instancia
-  Mapa.initDashboard('mapa-dashboard');
 
   // Cargar dashboard inicial
   await Dashboard.cargar();
 
   // Manejo de cambio de página
   document.addEventListener('pageChanged', async ({ detail }) => {
+    closeSidebarMobile();
     const { page } = detail;
     if (page === 'cuarteles') await Cuarteles.cargar();
     else if (page === 'oficiales') { await Oficiales.cargar(); initTabs('page-oficiales'); }
@@ -548,12 +574,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     else if (page === 'fiscalizador') { await cargarFiscalizador(); }
     else if (page === 'mapa') {
       setTimeout(() => {
-        // CORRECCIÓN #3: El mapa full tiene su propio div y su propia instancia separada
         if (!window._mapaFull) {
-          window._mapaFull = L.map('mapa-full', { center: [-35.5, -71.0], zoom: 5 });
+          window._mapaFull = L.map('mapa-full', { center:[-35.5,-71.0], zoom:5 });
           L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(window._mapaFull);
+          Mapa.map = window._mapaFull;
         }
-        Mapa.renderizarEnMapa(window._mapaFull, Dashboard.cuarteles, Dashboard.oficiales);
+        Mapa.renderizar(Dashboard.cuarteles, Dashboard.oficiales);
       }, 100);
     }
   });
@@ -591,8 +617,7 @@ async function cargarFiscalizador() {
     }).join('');
   }
 
-  // CORRECCIÓN #8: solo renderizar los gráficos propios del fiscalizador
-  Charts.renderBarrasRegion(cuarteles||[], oficiales||[]);
+  Charts.renderDashboard(cuarteles||[], oficiales||[]);
   const ctx = document.getElementById('chart-dona-fisc');
   if (ctx) {
     const enF = (oficiales||[]).filter(o=>o.especialidad_mof&&o.cuartel_id&&o.estado==='ACTIVO').length;
@@ -602,5 +627,24 @@ async function cargarFiscalizador() {
   }
 }
 </script>
+<!-- BOTTOM NAV (visible solo en móvil pequeño) -->
+<nav class="bottom-nav" id="bottom-nav">
+  <button class="bottom-nav-item active" data-page="dashboard" onclick="navegarA('dashboard');setBottomActive(this)">
+    <span class="bnav-icon">🏠</span>Dashboard
+  </button>
+  <button class="bottom-nav-item" data-page="cuarteles" onclick="navegarA('cuarteles');setBottomActive(this)">
+    <span class="bnav-icon">🏛️</span>Cuarteles
+  </button>
+  <button class="bottom-nav-item" data-page="oficiales" onclick="navegarA('oficiales');setBottomActive(this)">
+    <span class="bnav-icon">👮</span>Oficiales
+  </button>
+  <button class="bottom-nav-item" data-page="simulador" onclick="navegarA('simulador');setBottomActive(this)">
+    <span class="bnav-icon">⚡</span>Simular
+  </button>
+  <button class="bottom-nav-item" onclick="toggleSidebar()">
+    <span class="bnav-icon">☰</span>Más
+  </button>
+</nav>
+
 </body>
 </html>
