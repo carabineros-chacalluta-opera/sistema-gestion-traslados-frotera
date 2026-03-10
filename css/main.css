@@ -539,7 +539,8 @@ input, select, textarea { font-family: inherit; }
 .cal-item.activo .cal-dot { background: var(--verde-claro); box-shadow: 0 0 8px var(--verde-claro); }
 
 /* ── MAPA CONTAINER ── */
-#mapa { height: 460px; border-radius: var(--radio); z-index: 1; }
+#mapa-dashboard { height: 420px; border-radius: var(--radio); z-index: 1; }
+#mapa-full      { height: 600px; border-radius: var(--radio); z-index: 1; }
 .leaflet-popup-content-wrapper { border-radius: var(--radio) !important; box-shadow: 0 4px 20px var(--sombra-fuerte) !important; }
 
 /* ── SIMULADOR ── */
@@ -672,6 +673,350 @@ input, select, textarea { font-family: inherit; }
   .main-content { margin-left: 0; }
   .simulador-grid { grid-template-columns: 1fr; }
   .form-row, .form-row-3 { grid-template-columns: 1fr; }
+}
+
+/* ══════════════════════════════════════════════════════
+   RESPONSIVE MÓVIL — Mobile-first completo
+   Breakpoints: 768px (tablet), 480px (teléfono)
+══════════════════════════════════════════════════════ */
+
+/* ── HAMBURGER BUTTON ── */
+.hamburger-btn {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 36px;
+  height: 36px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: var(--radio);
+  padding: 6px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.hamburger-btn span {
+  display: block;
+  height: 2px;
+  background: var(--blanco);
+  border-radius: 2px;
+  transition: var(--transicion);
+}
+
+/* Overlay oscuro detrás del sidebar en móvil */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 99;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.sidebar-overlay.open {
+  opacity: 1;
+}
+
+/* topbar-left agrupa hamburger + título */
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.topbar-left .topbar-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── TABLET: 768px ── */
+@media (max-width: 768px) {
+
+  html { font-size: 14px; }
+
+  /* Sidebar: oculto por defecto, desliza al abrir */
+  .sidebar {
+    transform: translateX(-240px);
+    transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+    z-index: 200;
+  }
+  .sidebar.open {
+    transform: translateX(0);
+    box-shadow: 6px 0 30px rgba(0,0,0,0.5);
+  }
+  .sidebar-overlay { display: block; }
+
+  /* Main sin margen lateral */
+  .main-content { margin-left: 0; }
+
+  /* Hamburger visible */
+  .hamburger-btn { display: flex; }
+
+  /* Topbar compacto */
+  .topbar { padding: 10px 16px; }
+  .topbar-fecha { display: none; } /* demasiado largo en móvil */
+  .topbar-btn-label { display: none; } /* solo el ícono */
+
+  /* Página con padding reducido */
+  .page { padding: 16px; }
+
+  /* Stat grid: 2 columnas en tablet */
+  .stat-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 12px; margin-bottom: 16px; }
+  .stat-card { padding: 14px; }
+  .stat-valor { font-size: 1.8rem; }
+  .stat-label { font-size: 0.68rem; }
+
+  /* Dashboard: mapa + alertas apilados */
+  .page #page-dashboard > div[style*="grid-template-columns:1fr 340px"],
+  div[style*="grid-template-columns:1fr 340px"] {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 16px !important;
+  }
+
+  /* Gráficos dashboard: columna única */
+  div[style*="grid-template-columns:1fr 1fr"] {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 16px !important;
+  }
+
+  /* Mapa más bajo en móvil */
+  #mapa-dashboard { height: 300px; }
+  #mapa-full      { height: 400px; }
+
+  /* Calendario: scroll horizontal compacto */
+  .calendario-bar {
+    padding: 12px 16px;
+    gap: 0;
+    margin-bottom: 16px;
+  }
+  .cal-item { min-width: 72px; }
+  .cal-evento { font-size: 0.65rem; }
+
+  /* Tablas: scroll horizontal + celdas compactas */
+  .tabla-wrapper { border-radius: var(--radio); margin: 0 -4px; }
+  .tabla { font-size: 0.8rem; }
+  .tabla thead th { padding: 8px 10px; font-size: 0.75rem; }
+  .tabla tbody td { padding: 8px 10px; }
+
+  /* Ocultar columnas menos críticas en tablet */
+  .tabla .col-ocultar-tablet { display: none; }
+
+  /* Cards */
+  .card { padding: 14px; }
+  .card-header { margin-bottom: 12px; padding-bottom: 10px; flex-wrap: wrap; gap: 8px; }
+
+  /* Simulador: columna única */
+  .simulador-grid { grid-template-columns: 1fr; gap: 16px; }
+
+  /* Planes: columna única */
+  div[style*="grid-template-columns:280px 1fr"] {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 16px !important;
+  }
+
+  /* Fiscalizador: columna única */
+  .page #page-fiscalizador > div[style*="grid-template-columns:1fr 1fr"] {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  /* Formularios */
+  .form-row,
+  .form-row-3 { grid-template-columns: 1fr !important; }
+
+  /* Modales */
+  .modal-overlay { padding: 0; align-items: flex-end; }
+  .modal {
+    max-width: 100% !important;
+    max-height: 92vh;
+    border-radius: var(--radio-lg) var(--radio-lg) 0 0;
+    animation: modalSlideUp 0.3s ease;
+  }
+  .modal-body { padding: 16px; }
+  .modal-footer { padding: 12px 16px; }
+
+  /* Toasts */
+  .toast-container { bottom: 16px; right: 16px; left: 16px; }
+  .toast { max-width: 100%; }
+
+  /* Alertas */
+  .alerta-item { padding: 10px; }
+  .alerta-desc { font-size: 0.75rem; }
+}
+
+/* ── MÓVIL PEQUEÑO: 480px ── */
+@media (max-width: 480px) {
+
+  html { font-size: 13px; }
+
+  /* Stat grid: 2 columnas comprimidas */
+  .stat-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px; }
+  .stat-card { padding: 12px 10px; }
+  .stat-valor { font-size: 1.6rem; }
+
+  /* Topbar mínimo */
+  .topbar { padding: 8px 12px; }
+  .topbar-left { gap: 8px; }
+  .topbar-alerta-btn { padding: 5px 8px; font-size: 0.75rem; }
+
+  /* Página */
+  .page { padding: 12px; }
+
+  /* Mapa más compacto */
+  #mapa-dashboard { height: 260px; }
+  #mapa-full      { height: 340px; }
+
+  /* Card header: apila título y acciones */
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .card-header > div:last-child,
+  .card-header > button { align-self: flex-start; }
+
+  /* Tablas de oficiales y cuarteles:
+     En móvil muy pequeño se convierte en tarjetas apiladas */
+  .tabla-mobile-cards thead { display: none; }
+  .tabla-mobile-cards tbody tr {
+    display: block;
+    border: 1px solid var(--gris-borde);
+    border-radius: var(--radio);
+    margin-bottom: 12px;
+    padding: 12px;
+    background: var(--blanco);
+    box-shadow: 0 1px 4px var(--sombra);
+  }
+  .tabla-mobile-cards tbody tr:hover { background: var(--verde-fondo); }
+  .tabla-mobile-cards tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--gris-claro);
+    font-size: 0.82rem;
+  }
+  .tabla-mobile-cards tbody td:last-child { border-bottom: none; padding-top: 8px; }
+  .tabla-mobile-cards tbody td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    color: var(--gris-medio);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    flex-shrink: 0;
+    margin-right: 8px;
+  }
+
+  /* Botones: más grandes para touch */
+  .btn { padding: 9px 14px; }
+  .btn-sm { padding: 7px 10px; font-size: 0.78rem; }
+
+  /* Calendario: scroll compacto */
+  .calendario-bar { padding: 10px 12px; }
+  .cal-item { min-width: 64px; }
+  .cal-mes { font-size: 0.68rem; }
+  .cal-evento { font-size: 0.6rem; }
+
+  /* Modales: ocupan toda la pantalla en móvil pequeño */
+  .modal { max-height: 96vh; }
+  .modal-body { padding: 14px 12px; }
+
+  /* Search bars más compactos */
+  .search-bar { flex-direction: column; }
+  .search-bar > * { width: 100%; }
+
+  /* Formulario de formación académica: 1 columna */
+  div[style*="grid-template-columns:1fr 1fr 1fr 1fr auto"] {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  /* Progress bars más visibles */
+  .progress-wrap { height: 10px; }
+
+  /* Cuarteles detalle: columna única */
+  #detalle-cuartel-content > div[style*="grid-template-columns:1fr 1fr"] {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 16px !important;
+  }
+
+  /* Ficha oficial: columna única */
+  #ficha-content > div[style*="grid-template-columns:1fr 1fr"] {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 16px !important;
+  }
+}
+
+/* ── ANIMACIÓN modal bottom-sheet en móvil ── */
+@keyframes modalSlideUp {
+  from { opacity: 0; transform: translateY(60px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── NAVEGACIÓN INFERIOR EN MÓVIL (bottom nav) ── */
+@media (max-width: 480px) {
+  /* Bottom navigation bar para las secciones más usadas */
+  .bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--verde-sidebar);
+    border-top: 1px solid rgba(255,255,255,0.1);
+    z-index: 150;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.3);
+  }
+  .bottom-nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 4px 10px;
+    color: rgba(255,255,255,0.5);
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    transition: var(--transicion);
+    border: none;
+    background: none;
+    font-family: inherit;
+    text-transform: uppercase;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .bottom-nav-item .bnav-icon { font-size: 1.3rem; margin-bottom: 2px; }
+  .bottom-nav-item.active { color: var(--verde-claro); }
+  .bottom-nav-item:active { background: rgba(255,255,255,0.05); }
+
+  /* Agregar padding inferior al contenido para no quedar tapado por bottom nav */
+  .page { padding-bottom: 80px; }
+  .toast-container { bottom: 76px; }
+}
+
+/* ── TOUCH TARGETS mínimos 44px ── */
+@media (max-width: 768px) {
+  .nav-item { padding: 13px 16px; }
+  button, .btn, .tab-btn { min-height: 36px; }
+  .form-control { padding: 11px 12px; font-size: 1rem; } /* evita zoom en iOS */
+  select.form-control { font-size: 1rem; } /* evita zoom en iOS */
+  input.form-control  { font-size: 1rem; }
+}
+
+/* ── EVITAR ZOOM EN iOS AL HACER FOCUS ── */
+@media (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
 }
 
 /* ── LOGIN ── */
