@@ -2,8 +2,8 @@
 // SIGDOF · Configuración y Utilidades Globales v2.0
 // ═══════════════════════════════════════════════════════════════
 
-const SUPABASE_URL = 'https://iblzxodbotmdnpzcgdey.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlibHp4b2Rib3RtZG5wemNnZGV5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxODExNTYsImV4cCI6MjA4Nzc1NzE1Nn0.IiQSxOeCMiu8Ur4vG1H_s94QHItBbYP1vGrnW_bM2ls';
+const SUPABASE_URL = 'https://pfjauvcakdhxtpsbbqed.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBmamF1dmNha2RoeHRwc2JicWVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4ODkzNzksImV4cCI6MjA5MTQ2NTM3OX0.W7ztRH0B896XdIAcKCJSSI4oU37lIKo4bXYf0H0B9yU';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ── CONSTANTES INSTITUCIONALES ──────────────────────────────────
