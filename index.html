@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SIGDOF · Carabineros de Chile</title>
+  <link rel="stylesheet" href="css/main.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════════
+     LOADING OVERLAY
+══════════════════════════════════════════════════════════════ -->
+<div id="loading-overlay" class="loading-overlay" style="display:none;">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Procesando...</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     LOGIN
+══════════════════════════════════════════════════════════════ -->
+<div id="login-screen" class="login-screen" style="display:none;">
+  <div class="login-card">
+    <div class="login-logo">
+      <img src="assets/escudo.png" alt="Carabineros" onerror="this.parentElement.textContent='🛡️'"/>
+    </div>
+    <div class="login-title">SIGDOF</div>
+    <div class="login-sub">Sistema de Gestión de Dotación Fronteriza<br>Carabineros de Chile</div>
+
+    <div class="form-group">
+      <label class="form-label">Correo institucional</label>
+      <input type="email" id="login-email" class="form-control" placeholder="usuario@carabineros.cl" autocomplete="email"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Contraseña</label>
+      <input type="password" id="login-password" class="form-control" placeholder="••••••••" autocomplete="current-password"/>
+    </div>
+    <div id="login-error" class="login-error"></div>
+    <button id="login-btn" class="btn btn-primary" style="width:100%;margin-top:8px;justify-content:center;padding:12px;"
+      onclick="Auth.login(document.getElementById('login-email').value, document.getElementById('login-password').value)">
+      INGRESAR AL SISTEMA
+    </button>
+    <div class="login-footer">Acceso restringido · Solo personal autorizado</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     APP PRINCIPAL
+══════════════════════════════════════════════════════════════ -->
+<div id="app-wrapper" style="display:none;">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <img src="assets/escudo.png" alt="Carabineros" onerror="this.style.display='none'"/>
+      <div class="sidebar-logo-text">
+        <div class="titulo">SIGDOF</div>
+        <div class="subtitulo">Dotación Fronteriza</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-title">Principal</div>
+      <div class="nav-item active" data-page="dashboard" onclick="navegarA('dashboard')">
+        <span class="nav-icon">🏠</span><span class="nav-label">Dashboard</span>
+        <span class="nav-badge" id="alertas-badge"></span>
+      </div>
+      <div class="nav-item" data-page="mapa" onclick="navegarA('mapa')">
+        <span class="nav-icon">🗺️</span><span class="nav-label">Mapa Operativo</span>
+      </div>
+
+      <div class="nav-section-title">Gestión</div>
+      <div class="nav-item" data-page="cuarteles" onclick="navegarA('cuarteles')">
+        <span class="nav-icon">🏛️</span><span class="nav-label">Cuarteles</span>
+      </div>
+      <div class="nav-item" data-page="oficiales" onclick="navegarA('oficiales')">
+        <span class="nav-icon">👮</span><span class="nav-label">Oficiales</span>
+      </div>
+      <div class="nav-item" data-page="bolsa" onclick="navegarA('bolsa')">
+        <span class="nav-icon">🎖️</span><span class="nav-label">Bolsa Especialistas</span>
+        <span class="nav-badge" id="nav-alertas-badge"></span>
+      </div>
+
+      <div class="nav-section-title">Planificación</div>
+      <div class="nav-item" data-page="simulador" onclick="navegarA('simulador')">
+        <span class="nav-icon">⚡</span><span class="nav-label">Simulador Traslados</span>
+      </div>
+      <div class="nav-item" data-page="planes" onclick="navegarA('planes')">
+        <span class="nav-icon">📋</span><span class="nav-label">Planes de Traslado</span>
+      </div>
+
+      <div class="nav-section-title">Análisis</div>
+      <div class="nav-item" data-page="fiscalizador" onclick="navegarA('fiscalizador')">
+        <span class="nav-icon">📊</span><span class="nav-label">Fiscalizador</span>
+      </div>
+    </nav>
+    <div class="sidebar-usuario">
+      <span style="font-size:1.2rem;">👤</span>
+      <span class="sidebar-usuario-email" id="usuario-email"></span>
+      <button class="btn btn-ghost btn-sm" onclick="Auth.logout()" title="Cerrar sesión" style="padding:4px 8px;min-height:auto;">⏏</button>
+    </div>
+    <div class="sidebar-footer">SIGDOF v2.0 · 2025<br>Carabineros de Chile</div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main-content">
+    <div class="topbar">
+      <div class="topbar-left">
+        <button class="hamburger-btn" id="hamburger-btn" aria-label="Abrir menú" onclick="toggleSidebar()">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="topbar-title" id="topbar-title">DASHBOARD</div>
+      </div>
+      <div class="topbar-right">
+        <div class="topbar-fecha" id="topbar-fecha"></div>
+        <button class="topbar-alerta-btn" onclick="navegarA('fiscalizador')">
+          📊 <span class="topbar-btn-label">Fiscalizador</span>
+        </button>
+      </div>
+    </div>
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <!-- ════ DASHBOARD ════ -->
+    <div class="page active" id="page-dashboard">
+      <div class="stat-grid" style="grid-template-columns:repeat(5,1fr);">
+        <div class="stat-card verde"><div class="stat-label">Cuarteles Activos</div><div class="stat-valor" id="stat-cuarteles">—</div><div class="stat-sub">con dotación</div></div>
+        <div class="stat-card azul"><div class="stat-label">En Frontera</div><div class="stat-valor" id="stat-en-frontera">—</div><div class="stat-sub">oficiales activos</div></div>
+        <div class="stat-card verde"><div class="stat-label">Especialistas</div><div class="stat-valor" id="stat-especialistas">—</div><div class="stat-sub">en cuarteles frontera</div></div>
+        <div class="stat-card amarillo"><div class="stat-label">Bolsa Disponible</div><div class="stat-valor" id="stat-bolsa">—</div><div class="stat-sub">especialistas fuera</div></div>
+        <div class="stat-card rojo"><div class="stat-label">Vacantes</div><div class="stat-valor" id="stat-vacantes">—</div><div class="stat-sub">déficit total</div></div>
+      </div>
+
+      <div id="calendario-bar" class="calendario-bar"></div>
+
+      <div style="display:grid;grid-template-columns:1fr 340px;gap:20px;">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">🗺️ Estado de Cuarteles</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              <button class="btn btn-sm btn-ghost" data-filtro-mapa="todos">Todos</button>
+              <button class="btn btn-sm btn-ghost" data-filtro-mapa="critico">Críticos</button>
+              <button class="btn btn-sm btn-ghost" data-filtro-mapa="deficit">Con déficit</button>
+              <button class="btn btn-sm btn-ghost" data-filtro-mapa="completo">Completos</button>
+            </div>
+          </div>
+          <div id="mapa" style="height:420px;border-radius:8px;"></div>
+          <div style="display:flex;gap:16px;margin-top:10px;font-size:0.78rem;color:#546E7A;">
+            <span>🔴 Crítico/Déficit</span><span>🟡 Parcial</span><span>🟢 Completo</span><span>⚪ Sin datos</span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">🚨 Alertas</div>
+            <span class="badge badge-rojo" id="contador-alertas">0</span>
+          </div>
+          <div id="alertas-lista" style="max-height:420px;overflow-y:auto;"></div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px;">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Universo Especialistas</div></div>
+          <canvas id="chart-dona" height="200"></canvas>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Criticidad por Cuartel</div></div>
+          <canvas id="chart-cobertura" height="200"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ MAPA ════ -->
+    <div class="page" id="page-mapa">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">🗺️ Mapa Operativo Nacional</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button class="btn btn-sm btn-ghost" data-filtro-mapa="todos">Todos</button>
+            <button class="btn btn-sm btn-ghost" data-filtro-mapa="critico">Críticos</button>
+            <button class="btn btn-sm btn-ghost" data-filtro-mapa="deficit">Con déficit</button>
+            <button class="btn btn-sm btn-ghost" data-filtro-mapa="completo">Completos</button>
+          </div>
+        </div>
+        <div id="mapa-full" style="height:600px;border-radius:8px;"></div>
+      </div>
+    </div>
+
+    <!-- ════ CUARTELES ════ -->
+    <div class="page" id="page-cuarteles">
+      <div class="stat-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:20px;">
+        <div class="stat-card verde"><div class="stat-label">Total Cuarteles</div><div class="stat-valor" id="crt-total">—</div></div>
+        <div class="stat-card azul"><div class="stat-label">Dotación Óptima</div><div class="stat-valor" id="crt-optimo">—</div></div>
+        <div class="stat-card verde"><div class="stat-label">Cubiertos</div><div class="stat-valor" id="crt-cubierto">—</div></div>
+        <div class="stat-card rojo"><div class="stat-label">Déficit</div><div class="stat-valor" id="crt-deficit">—</div></div>
+        <div class="stat-card amarillo"><div class="stat-label">Criticidad Alta</div><div class="stat-valor" id="crt-alta">—</div></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">🏛️ Cuarteles Fronterizos</div>
+          <button class="btn btn-primary btn-sm" onclick="Cuarteles.abrirNuevo()">+ Nuevo Cuartel</button>
+        </div>
+        <div class="search-bar">
+          <input type="text" class="form-control" placeholder="Buscar por nombre o región..." oninput="Cuarteles.buscar(this.value)" style="max-width:320px;"/>
+        </div>
+        <div class="tabla-wrapper">
+          <table class="tabla tabla-mobile-cards">
+            <thead>
+              <tr>
+                <th>Cuartel</th><th>Región</th><th>Tipo</th><th>Criticidad</th>
+                <th>Zona Trat.</th><th>Cobertura</th><th>Especialistas</th><th>Dotación</th><th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-cuarteles-body">
+              <tr><td colspan="9" style="text-align:center;padding:32px;color:#90A4AE;">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ OFICIALES ════ -->
+    <div class="page" id="page-oficiales">
+      <div class="card" id="page-oficiales">
+        <div class="card-header">
+          <div class="card-title">👮 Oficiales en Frontera</div>
+          <button class="btn btn-primary btn-sm" onclick="Oficiales.abrirNuevo()">+ Nuevo Oficial</button>
+        </div>
+        <div class="tab-bar">
+          <button class="tab-btn active" data-tab="tab-frontera">En Frontera</button>
+          <button class="tab-btn" data-tab="tab-todos">Todos</button>
+        </div>
+        <div id="tab-frontera" class="tab-panel active">
+          <div class="search-bar">
+            <input type="text" class="form-control" placeholder="Buscar oficial..." oninput="Oficiales.buscar(this.value)" style="max-width:320px;"/>
+          </div>
+          <div class="tabla-wrapper">
+            <table class="tabla tabla-mobile-cards">
+              <thead>
+                <tr>
+                  <th>Nombre</th><th>Grado</th><th>Cuartel</th><th>Cargo</th>
+                  <th>T. Cuartel</th><th>T. Grado</th><th>Especialidad</th><th>Estado</th><th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="tabla-oficiales-body">
+                <tr><td colspan="9" style="text-align:center;padding:32px;color:#90A4AE;">Cargando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div id="tab-todos" class="tab-panel">
+          <p style="color:var(--gris-medio);font-size:0.85rem;padding:16px 0;">Usa la sección principal para ver todos los oficiales del sistema.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ BOLSA ════ -->
+    <div class="page" id="page-bolsa">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">🎖️ Bolsa de Especialistas</div>
+          <span style="font-size:0.82rem;color:var(--gris-medio);">Especialistas "Montaña o Frontera" disponibles para asignar</span>
+        </div>
+        <div class="tabla-wrapper">
+          <table class="tabla">
+            <thead>
+              <tr>
+                <th>Nombre</th><th>Grado</th><th>Motivo</th><th>Puede Volver</th>
+                <th>Disponible desde</th><th>Próx. Ascenso</th><th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-bolsa-body">
+              <tr><td colspan="7" style="text-align:center;padding:32px;color:#90A4AE;">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ SIMULADOR ════ -->
+    <div class="page" id="page-simulador">
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-header">
+          <div class="card-title">⚡ Simulador de Traslados</div>
+          <button class="btn btn-outline btn-sm" onclick="Simulador.abrirComparador()">👥 Comparar Candidatos</button>
+        </div>
+        <div class="simulador-grid">
+          <!-- Panel 1: Oficial -->
+          <div>
+            <div style="font-size:0.78rem;font-weight:700;color:#1B5E20;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">1. Seleccionar Oficial</div>
+            <select id="sim-oficial" class="form-control" onchange="Simulador.seleccionarOficial(this.value)" style="margin-bottom:12px;">
+              <option value="">— Seleccionar oficial —</option>
+            </select>
+            <div id="sim-panel-oficial"></div>
+          </div>
+          <!-- Panel 2: Cuartel y Cargo -->
+          <div>
+            <div style="font-size:0.78rem;font-weight:700;color:#1B5E20;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">2. Cuartel Destino</div>
+            <select id="sim-cuartel" class="form-control" onchange="Simulador.seleccionarCuartel(this.value)" style="margin-bottom:12px;">
+              <option value="">— Seleccionar cuartel —</option>
+            </select>
+            <div id="sim-cargos"></div>
+          </div>
+          <!-- Panel 3: Resultado -->
+          <div id="sim-resultado">
+            <div class="empty-state" style="padding:32px;">
+              <div class="empty-icon">⚡</div>
+              <p>Selecciona un oficial, cuartel destino y cargo para ver el análisis.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Comparador multi-candidato -->
+        <div id="comparador-panel" style="display:none;">
+          <div style="font-family:'Oswald',sans-serif;font-size:0.9rem;font-weight:600;color:#1B5E20;margin-bottom:12px;text-transform:uppercase;">
+            👥 Candidatos para este cargo — ordenados por permanencia proyectada
+          </div>
+          <div id="comparador-lista"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ PLANES ════ -->
+    <div class="page" id="page-planes">
+      <div style="display:grid;grid-template-columns:280px 1fr;gap:20px;">
+        <!-- Sidebar planes -->
+        <div>
+          <div class="card" style="margin-bottom:16px;">
+            <div class="card-header"><div class="card-title">📋 Planes</div></div>
+            <div id="lista-planes"><p style="color:#999;font-size:0.85rem;">Cargando...</p></div>
+            <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:12px;" onclick="Planes.nuevoPlan()">
+              + Crear Plan Año Actual
+            </button>
+          </div>
+        </div>
+        <!-- Plan actual -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">📋 Plan Activo</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="btn btn-outline btn-sm" onclick="Planes.exportarPDF()">📄 PDF</button>
+              <button class="btn btn-outline btn-sm" onclick="Planes.exportarExcel()">📊 Excel</button>
+              <button class="btn btn-primary btn-sm" onclick="Planes.ejecutarPlan()">▶ Ejecutar Plan</button>
+            </div>
+          </div>
+          <div id="plan-actual-body">
+            <div class="empty-state"><div class="empty-icon">📋</div><p>Cargando...</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ FISCALIZADOR ════ -->
+    <div class="page" id="page-fiscalizador">
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-header"><div class="card-title">📊 Estado Detallado por Cuartel</div></div>
+        <div class="tabla-wrapper">
+          <table class="tabla">
+            <thead>
+              <tr>
+                <th>Cuartel</th><th>Región</th><th>Criticidad</th><th>Zona Trat.</th>
+                <th>Óptimo</th><th>Cubiertos</th><th>Especialistas</th><th>Rotación</th><th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-fisc-body">
+              <tr><td colspan="9" style="text-align:center;padding:32px;color:#90A4AE;">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Cobertura por Región</div></div>
+          <canvas id="chart-regiones" height="220"></canvas>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Distribución Especialistas</div></div>
+          <canvas id="chart-dona-fisc" height="220"></canvas>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div><!-- /#app-wrapper -->
+
+<!-- ════ BOTTOM NAV MOBILE ════ -->
+<nav class="bottom-nav">
+  <button class="bottom-nav-item active" onclick="navegarA('dashboard');setBottomActive(this)"><span class="bnav-icon">🏠</span>Dashboard</button>
+  <button class="bottom-nav-item" onclick="navegarA('cuarteles');setBottomActive(this)"><span class="bnav-icon">🏛️</span>Cuarteles</button>
+  <button class="bottom-nav-item" onclick="navegarA('oficiales');setBottomActive(this)"><span class="bnav-icon">👮</span>Oficiales</button>
+  <button class="bottom-nav-item" onclick="navegarA('simulador');setBottomActive(this)"><span class="bnav-icon">⚡</span>Simular</button>
+  <button class="bottom-nav-item" onclick="toggleSidebar()"><span class="bnav-icon">☰</span>Más</button>
+</nav>
+
+<!-- ════ TOAST ════ -->
+<div id="toast-container" class="toast-container"></div>
+
+<!-- ════ MODALES ════ -->
+
+<!-- Modal Detalle Cuartel -->
+<div id="modal-detalle-cuartel" class="modal-overlay">
+  <div class="modal" style="max-width:700px;">
+    <div class="modal-header">
+      <div class="modal-title">DETALLE CUARTEL</div>
+      <button class="modal-close" onclick="cerrarModal('modal-detalle-cuartel')">✕</button>
+    </div>
+    <div class="modal-body" id="detalle-cuartel-content"></div>
+  </div>
+</div>
+
+<!-- Modal Cuartel CRUD -->
+<div id="modal-cuartel" class="modal-overlay">
+  <div class="modal" style="max-width:620px;">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-cuartel-title">CUARTEL</div>
+      <button class="modal-close" onclick="cerrarModal('modal-cuartel')">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="form-cuartel" onsubmit="return false;">
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Nombre *</label><input type="text" class="form-control" name="crt_nombre" required/></div>
+          <div class="form-group"><label class="form-label">Región *</label><input type="text" class="form-control" name="crt_region" required/></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Tipo *</label>
+            <select class="form-control" name="crt_tipo" required>
+              <option value="">— Seleccionar —</option>
+              <option value="COMISARÍA">Comisaría</option>
+              <option value="TENENCIA">Tenencia</option>
+              <option value="SUBCOMISARÍA">Subcomisaría</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Criticidad</label>
+            <select class="form-control" name="crt_criticidad">
+              <option value="ALTA">Alta</option>
+              <option value="MEDIA">Media</option>
+              <option value="BAJA">Baja</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Zona tratamiento %</label><input type="number" class="form-control" name="crt_zona_trat" min="0" max="100" value="60"/></div>
+          <div class="form-group">
+            <label class="form-label">Tipo comisaría</label>
+            <select class="form-control" name="crt_tipo_com">
+              <option value="MAYOR_TCOL">Mayor o Tcol.</option>
+              <option value="SOLO_MAYOR">Solo Mayor</option>
+            </select>
+          </div>
+        </div>
+        <div style="font-size:0.78rem;font-weight:700;color:#263238;text-transform:uppercase;margin:12px 0 8px;letter-spacing:0.05em;">Dotación Óptima por Cargo</div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Comisario</label><input type="number" class="form-control" name="crt_dot_com" min="0" value="0"/></div>
+          <div class="form-group"><label class="form-label">Subcom. Servicios</label><input type="number" class="form-control" name="crt_dot_ss" min="0" value="0"/></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Subcom. Administrativo</label><input type="number" class="form-control" name="crt_dot_sa" min="0" value="0"/></div>
+          <div class="form-group"><label class="form-label">Jefe de Tenencia</label><input type="number" class="form-control" name="crt_dot_jt" min="0" value="0"/></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Oficial Operativo</label><input type="number" class="form-control" name="crt_dot_op" min="0" value="0"/></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Latitud</label><input type="number" class="form-control" name="crt_lat" step="0.0001" placeholder="-33.4567"/></div>
+          <div class="form-group"><label class="form-label">Longitud</label><input type="number" class="form-control" name="crt_lng" step="0.0001" placeholder="-70.6789"/></div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="cerrarModal('modal-cuartel')">Cancelar</button>
+      <button class="btn btn-primary" onclick="Cuarteles.guardar()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Ficha Oficial -->
+<div id="modal-ficha-oficial" class="modal-overlay">
+  <div class="modal" style="max-width:780px;">
+    <div class="modal-header">
+      <div class="modal-title">FICHA DEL OFICIAL</div>
+      <button class="modal-close" onclick="cerrarModal('modal-ficha-oficial')">✕</button>
+    </div>
+    <div class="modal-body" id="ficha-content"></div>
+  </div>
+</div>
+
+<!-- Modal Oficial CRUD -->
+<div id="modal-oficial" class="modal-overlay">
+  <div class="modal" style="max-width:700px;">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-oficial-title">OFICIAL</div>
+      <button class="modal-close" onclick="cerrarModal('modal-oficial')">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="form-oficial" onsubmit="return false;">
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Nombre completo *</label><input type="text" class="form-control" name="of_nombre" required/></div>
+          <div class="form-group"><label class="form-label">RUT</label><input type="text" class="form-control" name="of_rut" placeholder="12.345.678-9"/></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Grado *</label>
+            <select class="form-control" name="of_grado" required>
+              <option value="">— Seleccionar —</option>
+              <option value="SUBTENIENTE">Subteniente</option>
+              <option value="TENIENTE">Teniente</option>
+              <option value="CAPITAN">Capitán</option>
+              <option value="MAYOR">Mayor</option>
+              <option value="TENIENTE_CORONEL">Teniente Coronel</option>
+              <option value="CORONEL">Coronel</option>
+            </select>
+          </div>
+          <div class="form-group"><label class="form-label">Fecha ascenso a grado *</label><input type="date" class="form-control" name="of_fecha_ascenso" required/></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Especialidad Montaña o Frontera</label>
+            <select class="form-control" name="of_mof">
+              <option value="true">✅ Posee especialidad</option>
+              <option value="false">❌ Sin especialidad</option>
+            </select>
+          </div>
+          <div class="form-group"><label class="form-label">Año egreso Grupo de Montaña</label><input type="number" class="form-control" name="of_anio_grupo" placeholder="2020" min="1980" max="2030"/></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Cuartel asignado</label>
+            <select class="form-control" name="of_cuartel" id="of_cuartel">
+              <option value="">— Sin cuartel asignado —</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Cargo actual</label>
+            <select class="form-control" name="of_cargo">
+              <option value="">— Sin cargo —</option>
+              <option value="COMISARIO">Comisario</option>
+              <option value="SUBCOM_SERV">Subcomisario de Servicios</option>
+              <option value="SUBCOM_ADM">Subcomisario Administrativo</option>
+              <option value="JEFE_TEN">Jefe de Tenencia</option>
+              <option value="OF_OP">Oficial Operativo</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Fecha ingreso al cuartel</label><input type="date" class="form-control" name="of_fecha_ingreso"/></div>
+          <div class="form-group">
+            <label class="form-label">Estado</label>
+            <select class="form-control" name="of_estado">
+              <option value="ACTIVO">Activo</option>
+              <option value="PERFECCIONAMIENTO">Perfeccionamiento</option>
+              <option value="BAJA">Baja</option>
+              <option value="RETIRADO">Retirado</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Motivo fuera de frontera</label>
+            <select class="form-control" name="of_motivo_fuera">
+              <option value="">— Ninguno —</option>
+              <option value="ROTACION">Rotación normal</option>
+              <option value="PERFECCIONAMIENTO">Perfeccionamiento</option>
+              <option value="ASCENSO_SIN_CARGO">Ascenso sin cargo disponible</option>
+              <option value="MEDICO">Razones médicas</option>
+              <option value="FAMILIAR">Razones familiares/humanitarias</option>
+              <option value="DISCIPLINARIO">Razones disciplinarias</option>
+              <option value="SOLICITUD_PROPIA">Solicitud propia</option>
+              <option value="NECESIDAD_INST">Necesidad institucional</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">¿Puede volver?</label>
+            <select class="form-control" name="of_puede_volver">
+              <option value="SI">Sí</option>
+              <option value="CONDICIONAL">Condicional</option>
+              <option value="NO">No</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Fecha disponibilidad</label><input type="date" class="form-control" name="of_fecha_disp"/></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Inicio ACIPOL/Perfeccionamiento</label><input type="date" class="form-control" name="of_acipol_ini"/></div>
+          <div class="form-group"><label class="form-label">Retorno estimado</label><input type="date" class="form-control" name="of_acipol_ret"/></div>
+        </div>
+
+        <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--gris-claro);">
+          <div style="font-size:0.78rem;font-weight:700;color:#263238;text-transform:uppercase;margin-bottom:10px;letter-spacing:0.05em;">Formación académica</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:8px;margin-bottom:8px;align-items:end;">
+            <div class="form-group" style="margin:0;">
+              <label class="form-label">Tipo</label>
+              <select id="form-tipo" class="form-control">
+                <option value="Licenciatura">Licenciatura</option>
+                <option value="Magíster">Magíster</option>
+                <option value="Doctorado">Doctorado</option>
+                <option value="Diplomado">Diplomado</option>
+                <option value="Especialización">Especialización</option>
+                <option value="Técnico">Técnico</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin:0;"><label class="form-label">Título</label><input type="text" id="form-titulo" class="form-control" placeholder="Ej: Administración Pública"/></div>
+            <div class="form-group" style="margin:0;"><label class="form-label">Institución</label><input type="text" id="form-inst" class="form-control" placeholder="Universidad..."/></div>
+            <div class="form-group" style="margin:0;"><label class="form-label">Año</label><input type="number" id="form-anio" class="form-control" placeholder="2020" min="1970" max="2030"/></div>
+            <button type="button" class="btn btn-outline btn-sm" onclick="Oficiales.agregarFormacion()" style="margin-bottom:14px;">+</button>
+          </div>
+          <div id="formacion-lista"></div>
+        </div>
+
+        <div class="form-group" style="margin-top:14px;">
+          <label class="form-label">Observaciones</label>
+          <textarea class="form-control" name="of_observaciones" rows="3" placeholder="Anotaciones adicionales..."></textarea>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="cerrarModal('modal-oficial')">Cancelar</button>
+      <button class="btn btn-primary" onclick="Oficiales.guardar()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SCRIPTS (CORRECTAMENTE POSICIONADOS)
+════════════════════════════════════════════════════════════ -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/mapa.js"></script>
+<script src="js/dashboard.js"></script>
+<script src="js/cuarteles.js"></script>
+<script src="js/oficiales.js"></script>
+<script src="js/planes.js"></script>
+<script src="js/fiscalizador.js"></script>
+
+<script>
+// ── FUNCIONES GLOBALES DE UI ──────────────────────────────────────
+
+function setBottomActive(el) {
+  document.querySelectorAll('.bottom-nav-item').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+}
+
+function toggleSidebar() {
+  const sidebar = document.querySelector('.sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  sidebar.classList.toggle('open');
+  overlay.classList.toggle('open');
+}
+
+function closeSidebarMobile() {
+  if (window.innerWidth <= 768) {
+    document.querySelector('.sidebar').classList.remove('open');
+    document.getElementById('sidebar-overlay').classList.remove('open');
+  }
+}
+
+// ── INICIALIZACIÓN ───────────────────────────────────────────────
+
+// Función llamada por Auth.mostrarApp() una vez autenticado
+window.appInit = async function() {
+  actualizarFecha();
+  setInterval(actualizarFecha, 60000);
+
+  // Inicializar mapa del dashboard
+  Mapa.initDashboard('mapa');
+
+  // Cargar dashboard inicial
+  await Dashboard.cargar();
+
+  // Manejo de cambio de página
+  document.addEventListener('pageChanged', async ({ detail }) => {
+    closeSidebarMobile();
+    const { page } = detail;
+
+    if (page === 'cuarteles') {
+      await Cuarteles.cargar();
+
+    } else if (page === 'oficiales') {
+      await Oficiales.cargar();
+      initTabs('page-oficiales');
+
+    } else if (page === 'bolsa') {
+      await Oficiales.cargar();
+
+    } else if (page === 'simulador') {
+      await Simulador.cargar();
+
+    } else if (page === 'planes') {
+      await Planes.cargar();
+
+    } else if (page === 'fiscalizador') {
+      await Fiscalizador.cargar();
+
+    } else if (page === 'mapa') {
+      // CORREGIDO: inicializa mapa full con su propia instancia
+      setTimeout(() => {
+        Mapa.initFull('mapa-full');
+        Mapa.renderizarFull(Dashboard.cuarteles, Dashboard.oficiales);
+      }, 100);
+    }
+  });
+};
+
+// Arrancar autenticación
+document.addEventListener('DOMContentLoaded', () => {
+  Auth.init();
+});
+
+// Login con Enter
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && document.getElementById('login-screen').style.display !== 'none') {
+    Auth.login(
+      document.getElementById('login-email').value,
+      document.getElementById('login-password').value
+    );
+  }
+});
+</script>
+
+</body>
+</html>
