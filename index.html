@@ -5,17 +5,51 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>SIGDOF · Carabineros de Chile</title>
   <link rel="stylesheet" href="css/main.css"/>
-  <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-  <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=Source+Sans+3:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 </head>
 <body>
 
 <!-- ══════════════════════════════════════════════════════════════
-     LAYOUT
+     LOADING OVERLAY
 ══════════════════════════════════════════════════════════════ -->
-<div class="app-wrapper">
+<div id="loading-overlay" class="loading-overlay" style="display:none;">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Procesando...</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     LOGIN
+══════════════════════════════════════════════════════════════ -->
+<div id="login-screen" class="login-screen" style="display:none;">
+  <div class="login-card">
+    <div class="login-logo">
+      <img src="assets/escudo.png" alt="Carabineros" onerror="this.parentElement.textContent='🛡️'"/>
+    </div>
+    <div class="login-title">SIGDOF</div>
+    <div class="login-sub">Sistema de Gestión de Dotación Fronteriza<br>Carabineros de Chile</div>
+
+    <div class="form-group">
+      <label class="form-label">Correo institucional</label>
+      <input type="email" id="login-email" class="form-control" placeholder="usuario@carabineros.cl" autocomplete="email"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Contraseña</label>
+      <input type="password" id="login-password" class="form-control" placeholder="••••••••" autocomplete="current-password"/>
+    </div>
+    <div id="login-error" class="login-error"></div>
+    <button id="login-btn" class="btn btn-primary" style="width:100%;margin-top:8px;justify-content:center;padding:12px;"
+      onclick="Auth.login(document.getElementById('login-email').value, document.getElementById('login-password').value)">
+      INGRESAR AL SISTEMA
+    </button>
+    <div class="login-footer">Acceso restringido · Solo personal autorizado</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     APP PRINCIPAL
+══════════════════════════════════════════════════════════════ -->
+<div id="app-wrapper" style="display:none;">
 
   <!-- SIDEBAR -->
   <aside class="sidebar">
@@ -30,7 +64,7 @@
       <div class="nav-section-title">Principal</div>
       <div class="nav-item active" data-page="dashboard" onclick="navegarA('dashboard')">
         <span class="nav-icon">🏠</span><span class="nav-label">Dashboard</span>
-        <span class="nav-badge" id="alertas-badge" style="display:none;"></span>
+        <span class="nav-badge" id="alertas-badge"></span>
       </div>
       <div class="nav-item" data-page="mapa" onclick="navegarA('mapa')">
         <span class="nav-icon">🗺️</span><span class="nav-label">Mapa Operativo</span>
@@ -61,7 +95,12 @@
         <span class="nav-icon">📊</span><span class="nav-label">Fiscalizador</span>
       </div>
     </nav>
-    <div class="sidebar-footer">SIGDOF v1.0 · 2025<br>Carabineros de Chile</div>
+    <div class="sidebar-usuario">
+      <span style="font-size:1.2rem;">👤</span>
+      <span class="sidebar-usuario-email" id="usuario-email"></span>
+      <button class="btn btn-ghost btn-sm" onclick="Auth.logout()" title="Cerrar sesión" style="padding:4px 8px;min-height:auto;">⏏</button>
+    </div>
+    <div class="sidebar-footer">SIGDOF v2.0 · 2025<br>Carabineros de Chile</div>
   </aside>
 
   <!-- MAIN -->
@@ -75,7 +114,9 @@
       </div>
       <div class="topbar-right">
         <div class="topbar-fecha" id="topbar-fecha"></div>
-        <button class="topbar-alerta-btn" onclick="navegarA('fiscalizador')">📊 <span class="topbar-btn-label">Fiscalizador</span></button>
+        <button class="topbar-alerta-btn" onclick="navegarA('fiscalizador')">
+          📊 <span class="topbar-btn-label">Fiscalizador</span>
+        </button>
       </div>
     </div>
     <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
@@ -85,7 +126,7 @@
       <div class="stat-grid" style="grid-template-columns:repeat(5,1fr);">
         <div class="stat-card verde"><div class="stat-label">Cuarteles Activos</div><div class="stat-valor" id="stat-cuarteles">—</div><div class="stat-sub">con dotación</div></div>
         <div class="stat-card azul"><div class="stat-label">En Frontera</div><div class="stat-valor" id="stat-en-frontera">—</div><div class="stat-sub">oficiales activos</div></div>
-        <div class="stat-card verde"><div class="stat-label">Especialistas Activos</div><div class="stat-valor" id="stat-especialistas">—</div><div class="stat-sub">en cuarteles frontera</div></div>
+        <div class="stat-card verde"><div class="stat-label">Especialistas</div><div class="stat-valor" id="stat-especialistas">—</div><div class="stat-sub">en cuarteles frontera</div></div>
         <div class="stat-card amarillo"><div class="stat-label">Bolsa Disponible</div><div class="stat-valor" id="stat-bolsa">—</div><div class="stat-sub">especialistas fuera</div></div>
         <div class="stat-card rojo"><div class="stat-label">Vacantes</div><div class="stat-valor" id="stat-vacantes">—</div><div class="stat-sub">déficit total</div></div>
       </div>
@@ -94,8 +135,9 @@
 
       <div style="display:grid;grid-template-columns:1fr 340px;gap:20px;">
         <div class="card">
-          <div class="card-header"><div class="card-title">🗺️ Estado de Cuarteles</div>
-            <div style="display:flex;gap:6px;">
+          <div class="card-header">
+            <div class="card-title">🗺️ Estado de Cuarteles</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
               <button class="btn btn-sm btn-ghost" data-filtro-mapa="todos">Todos</button>
               <button class="btn btn-sm btn-ghost" data-filtro-mapa="critico">Críticos</button>
               <button class="btn btn-sm btn-ghost" data-filtro-mapa="deficit">Con déficit</button>
@@ -108,7 +150,10 @@
           </div>
         </div>
         <div class="card">
-          <div class="card-header"><div class="card-title">🚨 Alertas</div><span class="badge badge-rojo" id="contador-alertas">0</span></div>
+          <div class="card-header">
+            <div class="card-title">🚨 Alertas</div>
+            <span class="badge badge-rojo" id="contador-alertas">0</span>
+          </div>
           <div id="alertas-lista" style="max-height:420px;overflow-y:auto;"></div>
         </div>
       </div>
@@ -127,13 +172,14 @@
 
     <!-- ════ MAPA ════ -->
     <div class="page" id="page-mapa">
-      <div class="card" style="margin-bottom:20px;">
+      <div class="card">
         <div class="card-header">
           <div class="card-title">🗺️ Mapa Operativo Nacional</div>
-          <div style="display:flex;gap:6px;">
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
             <button class="btn btn-sm btn-ghost" data-filtro-mapa="todos">Todos</button>
             <button class="btn btn-sm btn-ghost" data-filtro-mapa="critico">Críticos</button>
             <button class="btn btn-sm btn-ghost" data-filtro-mapa="deficit">Con déficit</button>
+            <button class="btn btn-sm btn-ghost" data-filtro-mapa="completo">Completos</button>
           </div>
         </div>
         <div id="mapa-full" style="height:600px;border-radius:8px;"></div>
@@ -155,18 +201,19 @@
           <button class="btn btn-primary btn-sm" onclick="Cuarteles.abrirNuevo()">+ Nuevo Cuartel</button>
         </div>
         <div class="search-bar">
-          <div class="search-input-wrap" style="flex:1;">
-            <span class="search-icon">🔍</span>
-            <input type="text" class="form-control search-input" placeholder="Buscar por nombre o región..." oninput="Cuarteles.buscar(this.value)"/>
-          </div>
+          <input type="text" class="form-control" placeholder="Buscar por nombre o región..." oninput="Cuarteles.buscar(this.value)" style="max-width:320px;"/>
         </div>
         <div class="tabla-wrapper">
           <table class="tabla tabla-mobile-cards">
-            <thead><tr>
-              <th>Cuartel</th><th>Región</th><th>Tipo</th><th>Criticidad</th>
-              <th>Zona Trat.</th><th>Cobertura</th><th>Especialistas</th><th>Dotación</th><th>Acciones</th>
-            </tr></thead>
-            <tbody id="tabla-cuarteles-body"></tbody>
+            <thead>
+              <tr>
+                <th>Cuartel</th><th>Región</th><th>Tipo</th><th>Criticidad</th>
+                <th>Zona Trat.</th><th>Cobertura</th><th>Especialistas</th><th>Dotación</th><th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-cuarteles-body">
+              <tr><td colspan="9" style="text-align:center;padding:32px;color:#90A4AE;">Cargando...</td></tr>
+            </tbody>
           </table>
         </div>
       </div>
@@ -174,24 +221,35 @@
 
     <!-- ════ OFICIALES ════ -->
     <div class="page" id="page-oficiales">
-      <div class="card">
+      <div class="card" id="page-oficiales">
         <div class="card-header">
           <div class="card-title">👮 Oficiales en Frontera</div>
           <button class="btn btn-primary btn-sm" onclick="Oficiales.abrirNuevo()">+ Nuevo Oficial</button>
         </div>
-        <div class="search-bar">
-          <div class="search-input-wrap" style="flex:1;">
-            <input type="text" class="form-control search-input" placeholder="Buscar oficial..." oninput="Oficiales.buscar(this.value)"/>
+        <div class="tab-bar">
+          <button class="tab-btn active" data-tab="tab-frontera">En Frontera</button>
+          <button class="tab-btn" data-tab="tab-todos">Todos</button>
+        </div>
+        <div id="tab-frontera" class="tab-panel active">
+          <div class="search-bar">
+            <input type="text" class="form-control" placeholder="Buscar oficial..." oninput="Oficiales.buscar(this.value)" style="max-width:320px;"/>
+          </div>
+          <div class="tabla-wrapper">
+            <table class="tabla tabla-mobile-cards">
+              <thead>
+                <tr>
+                  <th>Nombre</th><th>Grado</th><th>Cuartel</th><th>Cargo</th>
+                  <th>T. Cuartel</th><th>T. Grado</th><th>Especialidad</th><th>Estado</th><th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="tabla-oficiales-body">
+                <tr><td colspan="9" style="text-align:center;padding:32px;color:#90A4AE;">Cargando...</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
-        <div class="tabla-wrapper">
-          <table class="tabla tabla-mobile-cards">
-            <thead><tr>
-              <th>Nombre</th><th>Grado</th><th>Cuartel</th><th>Cargo</th>
-              <th>Tiempo en Cuartel</th><th>Tiempo en Grado</th><th>Especialidad</th><th>Estado</th><th>Acciones</th>
-            </tr></thead>
-            <tbody id="tabla-oficiales-body"></tbody>
-          </table>
+        <div id="tab-todos" class="tab-panel">
+          <p style="color:var(--gris-medio);font-size:0.85rem;padding:16px 0;">Usa la sección principal para ver todos los oficiales del sistema.</p>
         </div>
       </div>
     </div>
@@ -200,17 +258,20 @@
     <div class="page" id="page-bolsa">
       <div class="card">
         <div class="card-header">
-          <div class="card-title">🎖️ Bolsa de Especialistas "Montaña o Frontera"</div>
-          <span class="badge badge-azul">Fuera de cuarteles fronterizos</span>
+          <div class="card-title">🎖️ Bolsa de Especialistas</div>
+          <span style="font-size:0.82rem;color:var(--gris-medio);">Especialistas "Montaña o Frontera" disponibles para asignar</span>
         </div>
-        <p style="font-size:0.85rem;color:#546E7A;margin-bottom:16px;">Especialistas con la habilitación "Montaña o Frontera" que no se encuentran actualmente ejerciendo en cuarteles fronterizos. Son candidatos prioritarios para cubrir vacantes.</p>
         <div class="tabla-wrapper">
           <table class="tabla">
-            <thead><tr>
-              <th>Nombre</th><th>Grado</th><th>Motivo Salida</th><th>¿Puede Volver?</th>
-              <th>Disponible Desde</th><th>Próximo Ascenso</th><th>Acciones</th>
-            </tr></thead>
-            <tbody id="tabla-bolsa-body"></tbody>
+            <thead>
+              <tr>
+                <th>Nombre</th><th>Grado</th><th>Motivo</th><th>Puede Volver</th>
+                <th>Disponible desde</th><th>Próx. Ascenso</th><th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-bolsa-body">
+              <tr><td colspan="7" style="text-align:center;padding:32px;color:#90A4AE;">Cargando...</td></tr>
+            </tbody>
           </table>
         </div>
       </div>
@@ -218,34 +279,43 @@
 
     <!-- ════ SIMULADOR ════ -->
     <div class="page" id="page-simulador">
-      <div style="margin-bottom:20px;">
-        <h2 style="font-family:'Oswald',sans-serif;color:#1B5E20;margin-bottom:4px;">⚡ Simulador de Traslados</h2>
-        <p style="font-size:0.85rem;color:#546E7A;">Selecciona un oficial, un cuartel destino y un cargo para validar la asignación y calcular la permanencia proyectada.</p>
-      </div>
-      <div class="simulador-grid">
-        <!-- Panel 1: Oficial -->
-        <div class="simulador-panel">
-          <div class="simulador-panel-header">1 · Seleccionar Oficial</div>
-          <div class="simulador-panel-body">
-            <select class="form-control" id="sim-oficial" onchange="Simulador.seleccionarOficial(this.value)">
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-header">
+          <div class="card-title">⚡ Simulador de Traslados</div>
+          <button class="btn btn-outline btn-sm" onclick="Simulador.abrirComparador()">👥 Comparar Candidatos</button>
+        </div>
+        <div class="simulador-grid">
+          <!-- Panel 1: Oficial -->
+          <div>
+            <div style="font-size:0.78rem;font-weight:700;color:#1B5E20;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">1. Seleccionar Oficial</div>
+            <select id="sim-oficial" class="form-control" onchange="Simulador.seleccionarOficial(this.value)" style="margin-bottom:12px;">
               <option value="">— Seleccionar oficial —</option>
             </select>
-            <div id="sim-panel-oficial" style="margin-top:12px;"></div>
+            <div id="sim-panel-oficial"></div>
           </div>
-        </div>
-        <!-- Panel 2: Destino -->
-        <div class="simulador-panel">
-          <div class="simulador-panel-header">2 · Cuartel Destino y Cargo</div>
-          <div class="simulador-panel-body">
-            <select class="form-control" id="sim-cuartel" onchange="Simulador.seleccionarCuartel(this.value)" style="margin-bottom:12px;">
+          <!-- Panel 2: Cuartel y Cargo -->
+          <div>
+            <div style="font-size:0.78rem;font-weight:700;color:#1B5E20;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">2. Cuartel Destino</div>
+            <select id="sim-cuartel" class="form-control" onchange="Simulador.seleccionarCuartel(this.value)" style="margin-bottom:12px;">
               <option value="">— Seleccionar cuartel —</option>
             </select>
             <div id="sim-cargos"></div>
           </div>
+          <!-- Panel 3: Resultado -->
+          <div id="sim-resultado">
+            <div class="empty-state" style="padding:32px;">
+              <div class="empty-icon">⚡</div>
+              <p>Selecciona un oficial, cuartel destino y cargo para ver el análisis.</p>
+            </div>
+          </div>
         </div>
-        <!-- Panel 3: Resultado -->
-        <div id="sim-resultado">
-          <div class="empty-state" style="padding:60px 20px;"><div class="empty-icon">⚡</div><p>Completa los pasos anteriores para ver el análisis.</p></div>
+
+        <!-- Comparador multi-candidato -->
+        <div id="comparador-panel" style="display:none;">
+          <div style="font-family:'Oswald',sans-serif;font-size:0.9rem;font-weight:600;color:#1B5E20;margin-bottom:12px;text-transform:uppercase;">
+            👥 Candidatos para este cargo — ordenados por permanencia proyectada
+          </div>
+          <div id="comparador-lista"></div>
         </div>
       </div>
     </div>
@@ -253,239 +323,116 @@
     <!-- ════ PLANES ════ -->
     <div class="page" id="page-planes">
       <div style="display:grid;grid-template-columns:280px 1fr;gap:20px;">
-        <div class="card">
-          <div class="card-header"><div class="card-title">📋 Planes</div></div>
-          <button class="btn btn-primary" style="width:100%;margin-bottom:12px;" onclick="Planes.nuevoPlan()">+ Nuevo Plan Anual</button>
-          <div id="lista-planes"></div>
+        <!-- Sidebar planes -->
+        <div>
+          <div class="card" style="margin-bottom:16px;">
+            <div class="card-header"><div class="card-title">📋 Planes</div></div>
+            <div id="lista-planes"><p style="color:#999;font-size:0.85rem;">Cargando...</p></div>
+            <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:12px;" onclick="Planes.nuevoPlan()">
+              + Crear Plan Año Actual
+            </button>
+          </div>
         </div>
+        <!-- Plan actual -->
         <div class="card">
           <div class="card-header">
-            <div class="card-title" id="plan-titulo">Plan Activo</div>
-            <div style="display:flex;gap:8px;">
-              <button class="btn btn-outline btn-sm" onclick="Planes.exportarPDF()">📄 Exportar PDF</button>
-              <button class="btn btn-primary btn-sm" onclick="Planes.ejecutarPlan()">✅ Ejecutar Plan</button>
+            <div class="card-title">📋 Plan Activo</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="btn btn-outline btn-sm" onclick="Planes.exportarPDF()">📄 PDF</button>
+              <button class="btn btn-outline btn-sm" onclick="Planes.exportarExcel()">📊 Excel</button>
+              <button class="btn btn-primary btn-sm" onclick="Planes.ejecutarPlan()">▶ Ejecutar Plan</button>
             </div>
           </div>
-          <div id="plan-actual-body"></div>
+          <div id="plan-actual-body">
+            <div class="empty-state"><div class="empty-icon">📋</div><p>Cargando...</p></div>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- ════ FISCALIZADOR ════ -->
     <div class="page" id="page-fiscalizador">
-      <div style="background:linear-gradient(135deg,#1B5E20,#2E7D32);border-radius:12px;padding:24px;color:white;margin-bottom:24px;">
-        <h2 style="font-family:'Oswald',sans-serif;font-size:1.4rem;margin-bottom:4px;">📊 Panel de Fiscalización</h2>
-        <p style="font-size:0.85rem;opacity:0.8;">Vista analítica del estado de dotación fronteriza · Solo lectura</p>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
-        <div class="card"><div class="card-header"><div class="card-title">Cobertura por Región</div></div><canvas id="chart-regiones" height="220"></canvas></div>
-        <div class="card"><div class="card-header"><div class="card-title">Universo Especialistas MoF</div></div><canvas id="chart-dona-fisc" height="220"></canvas></div>
-      </div>
-      <div class="card">
-        <div class="card-header"><div class="card-title">Estado Detallado por Cuartel</div></div>
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-header"><div class="card-title">📊 Estado Detallado por Cuartel</div></div>
         <div class="tabla-wrapper">
-          <table class="tabla" id="tabla-fiscalizador">
-            <thead><tr><th>Cuartel</th><th>Región</th><th>Criticidad</th><th>Zona Trat.</th><th>Óptimo</th><th>Asignados</th><th>Especialistas</th><th>Rotación Regla</th><th>Estado</th></tr></thead>
-            <tbody id="tabla-fisc-body"></tbody>
+          <table class="tabla">
+            <thead>
+              <tr>
+                <th>Cuartel</th><th>Región</th><th>Criticidad</th><th>Zona Trat.</th>
+                <th>Óptimo</th><th>Cubiertos</th><th>Especialistas</th><th>Rotación</th><th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-fisc-body">
+              <tr><td colspan="9" style="text-align:center;padding:32px;color:#90A4AE;">Cargando...</td></tr>
+            </tbody>
           </table>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Cobertura por Región</div></div>
+          <canvas id="chart-regiones" height="220"></canvas>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Distribución Especialistas</div></div>
+          <canvas id="chart-dona-fisc" height="220"></canvas>
         </div>
       </div>
     </div>
 
   </main>
-</div>
+</div><!-- /#app-wrapper -->
 
-<!-- TOAST -->
-<div class="toast-container" id="toast-container"></div>
+<!-- ════ BOTTOM NAV MOBILE ════ -->
+<nav class="bottom-nav">
+  <button class="bottom-nav-item active" onclick="navegarA('dashboard');setBottomActive(this)"><span class="bnav-icon">🏠</span>Dashboard</button>
+  <button class="bottom-nav-item" onclick="navegarA('cuarteles');setBottomActive(this)"><span class="bnav-icon">🏛️</span>Cuarteles</button>
+  <button class="bottom-nav-item" onclick="navegarA('oficiales');setBottomActive(this)"><span class="bnav-icon">👮</span>Oficiales</button>
+  <button class="bottom-nav-item" onclick="navegarA('simulador');setBottomActive(this)"><span class="bnav-icon">⚡</span>Simular</button>
+  <button class="bottom-nav-item" onclick="toggleSidebar()"><span class="bnav-icon">☰</span>Más</button>
+</nav>
 
-<!-- ════════════════════════════════════════════════════════════
-     MODALES
-════════════════════════════════════════════════════════════ -->
+<!-- ════ TOAST ════ -->
+<div id="toast-container" class="toast-container"></div>
 
-<!-- Modal: Ficha Oficial -->
-<div class="modal-overlay" id="modal-ficha-oficial">
-  <div class="modal" style="max-width:800px;">
-    <div class="modal-header">
-      <span class="modal-title">FICHA OFICIAL</span>
-      <button class="modal-close" onclick="cerrarModal('modal-ficha-oficial')">✕</button>
-    </div>
-    <div class="modal-body" id="ficha-content"></div>
-  </div>
-</div>
+<!-- ════ MODALES ════ -->
 
-<!-- Modal: Nuevo/Editar Oficial -->
-<div class="modal-overlay" id="modal-oficial">
-  <div class="modal" style="max-width:750px;">
-    <div class="modal-header">
-      <span class="modal-title" id="modal-oficial-title">OFICIAL</span>
-      <button class="modal-close" onclick="cerrarModal('modal-oficial')">✕</button>
-    </div>
-    <div class="modal-body">
-      <form id="form-oficial">
-        <div class="form-row">
-          <div class="form-group"><label class="form-label">Nombre completo *</label><input class="form-control" name="of_nombre" required/></div>
-          <div class="form-group"><label class="form-label">RUT</label><input class="form-control" name="of_rut" placeholder="12.345.678-9"/></div>
-        </div>
-        <div class="form-row">
-          <div class="form-group"><label class="form-label">Grado *</label>
-            <select class="form-control" name="of_grado" required>
-              <option value="">— Seleccionar —</option>
-              <option value="SUBTENIENTE">Subteniente</option>
-              <option value="TENIENTE">Teniente</option>
-              <option value="CAPITAN">Capitán</option>
-              <option value="MAYOR">Mayor</option>
-              <option value="TENIENTE_CORONEL">Teniente Coronel</option>
-              <option value="CORONEL">Coronel</option>
-            </select>
-          </div>
-          <div class="form-group"><label class="form-label">Fecha de ascenso al grado actual *</label><input type="date" class="form-control" name="of_fecha_ascenso" required/></div>
-        </div>
-        <div class="form-row">
-          <div class="form-group"><label class="form-label">Especialidad "Montaña o Frontera"</label>
-            <select class="form-control" name="of_mof">
-              <option value="false">No tiene</option>
-              <option value="true">Sí tiene</option>
-            </select>
-          </div>
-          <div class="form-group"><label class="form-label">Año egreso Grupo de Montaña</label><input type="number" class="form-control" name="of_anio_grupo" placeholder="ej: 2022" min="1990" max="2099"/></div>
-        </div>
-        <div class="form-row">
-          <div class="form-group"><label class="form-label">Cuartel asignado</label>
-            <select class="form-control" id="of_cuartel" name="of_cuartel">
-              <option value="">— Sin asignar —</option>
-            </select>
-          </div>
-          <div class="form-group"><label class="form-label">Cargo actual</label>
-            <select class="form-control" name="of_cargo">
-              <option value="">— Sin cargo —</option>
-              <option value="COMISARIO">Comisario</option>
-              <option value="SUBCOM_SERV">Subcomisario de Servicios</option>
-              <option value="SUBCOM_ADM">Subcomisario Administrativo</option>
-              <option value="JEFE_TEN">Jefe de Tenencia</option>
-              <option value="OF_OP">Oficial Operativo</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group"><label class="form-label">Fecha ingreso al cuartel</label><input type="date" class="form-control" name="of_fecha_ingreso"/></div>
-          <div class="form-group"><label class="form-label">Estado</label>
-            <select class="form-control" name="of_estado">
-              <option value="ACTIVO">Activo</option>
-              <option value="PERFECCIONAMIENTO">En Perfeccionamiento</option>
-              <option value="RETIRADO">Retirado</option>
-              <option value="BAJA">Baja</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group"><label class="form-label">Motivo fuera de frontera</label>
-            <select class="form-control" name="of_motivo_fuera">
-              <option value="">— No aplica —</option>
-              <option value="ROTACION">Rotación normal</option>
-              <option value="PERFECCIONAMIENTO">Perfeccionamiento</option>
-              <option value="ASCENSO_SIN_CARGO">Ascenso sin cargo disponible</option>
-              <option value="MEDICO">Razones médicas</option>
-              <option value="FAMILIAR">Razones familiares/humanitarias</option>
-              <option value="DISCIPLINARIO">Razones disciplinarias</option>
-              <option value="SOLICITUD_PROPIA">Solicitud propia</option>
-              <option value="NECESIDAD_INST">Necesidad institucional</option>
-            </select>
-          </div>
-          <div class="form-group"><label class="form-label">¿Puede volver a frontera?</label>
-            <select class="form-control" name="of_puede_volver">
-              <option value="SI">Sí</option>
-              <option value="CONDICIONAL">Condicional</option>
-              <option value="NO">No</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group"><label class="form-label">Fecha disponibilidad retorno</label><input type="date" class="form-control" name="of_fecha_disp"/></div>
-          <div class="form-group"><label class="form-label">Retiro estimado</label><input type="date" class="form-control" name="of_retiro"/></div>
-        </div>
-        <div class="form-row">
-          <div class="form-group"><label class="form-label">ACIPOL — Inicio</label><input type="date" class="form-control" name="of_acipol_ini"/></div>
-          <div class="form-group"><label class="form-label">ACIPOL — Retorno estimado</label><input type="date" class="form-control" name="of_acipol_ret"/></div>
-        </div>
-        <hr style="margin:16px 0;border-color:#e0e0e0;"/>
-        <div style="font-family:'Oswald',sans-serif;font-weight:600;color:#1B5E20;margin-bottom:12px;text-transform:uppercase;font-size:0.85rem;">Formación Académica</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:8px;margin-bottom:8px;align-items:end;">
-          <div>
-            <select class="form-control" id="form-tipo" style="font-size:0.82rem;">
-              <option value="Licenciatura">Licenciatura</option>
-              <option value="Título Profesional">Título Profesional</option>
-              <option value="Magíster">Magíster</option>
-              <option value="Doctorado">Doctorado</option>
-              <option value="Diplomado">Diplomado</option>
-              <option value="ACIPOL">ACIPOL</option>
-              <option value="Curso Internacional">Curso Internacional</option>
-              <option value="Estado Mayor">Estado Mayor</option>
-              <option value="Idioma Operativo">Idioma Operativo</option>
-              <option value="Otro">Otro</option>
-            </select>
-          </div>
-          <div><input class="form-control" id="form-titulo" placeholder="Título / nombre" style="font-size:0.82rem;"/></div>
-          <div><input class="form-control" id="form-inst" placeholder="Institución" style="font-size:0.82rem;"/></div>
-          <div><input class="form-control" id="form-anio" placeholder="Año" type="number" min="1980" max="2099" style="font-size:0.82rem;"/></div>
-          <div><input class="form-control" id="form-dur" placeholder="Duración" style="font-size:0.82rem;width:80px;"/></div>
-        </div>
-        <button type="button" class="btn btn-outline btn-sm" onclick="Oficiales.agregarFormacion()">+ Agregar</button>
-        <div id="formacion-lista" style="margin-top:8px;"></div>
-        <hr style="margin:16px 0;border-color:#e0e0e0;"/>
-        <div class="form-group"><label class="form-label">Observaciones</label><textarea class="form-control" name="of_observaciones" rows="2"></textarea></div>
-      </form>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="cerrarModal('modal-oficial')">Cancelar</button>
-      <button class="btn btn-primary" onclick="Oficiales.guardar()">💾 Guardar</button>
-    </div>
-  </div>
-</div>
-
-<!-- Modal: Detalle Cuartel -->
-<div class="modal-overlay" id="modal-detalle-cuartel">
+<!-- Modal Detalle Cuartel -->
+<div id="modal-detalle-cuartel" class="modal-overlay">
   <div class="modal" style="max-width:700px;">
     <div class="modal-header">
-      <span class="modal-title">DETALLE CUARTEL</span>
+      <div class="modal-title">DETALLE CUARTEL</div>
       <button class="modal-close" onclick="cerrarModal('modal-detalle-cuartel')">✕</button>
     </div>
     <div class="modal-body" id="detalle-cuartel-content"></div>
   </div>
 </div>
 
-<!-- Modal: Nuevo/Editar Cuartel -->
-<div class="modal-overlay" id="modal-cuartel">
-  <div class="modal">
+<!-- Modal Cuartel CRUD -->
+<div id="modal-cuartel" class="modal-overlay">
+  <div class="modal" style="max-width:620px;">
     <div class="modal-header">
-      <span class="modal-title" id="modal-cuartel-title">CUARTEL</span>
+      <div class="modal-title" id="modal-cuartel-title">CUARTEL</div>
       <button class="modal-close" onclick="cerrarModal('modal-cuartel')">✕</button>
     </div>
     <div class="modal-body">
-      <form id="form-cuartel">
+      <form id="form-cuartel" onsubmit="return false;">
         <div class="form-row">
-          <div class="form-group"><label class="form-label">Nombre *</label><input class="form-control" name="crt_nombre" required/></div>
-          <div class="form-group"><label class="form-label">Región *</label><input class="form-control" name="crt_region" required/></div>
+          <div class="form-group"><label class="form-label">Nombre *</label><input type="text" class="form-control" name="crt_nombre" required/></div>
+          <div class="form-group"><label class="form-label">Región *</label><input type="text" class="form-control" name="crt_region" required/></div>
         </div>
         <div class="form-row">
-          <div class="form-group"><label class="form-label">Tipo *</label>
+          <div class="form-group">
+            <label class="form-label">Tipo *</label>
             <select class="form-control" name="crt_tipo" required>
               <option value="">— Seleccionar —</option>
-              <option value="COM">Comisaría (COM)</option>
-              <option value="SUBCOM">Subcomisaría (SUBCOM)</option>
-              <option value="TCIA">Tenencia (TCIA)</option>
-              <option value="RET">Retén (RET)</option>
+              <option value="COMISARÍA">Comisaría</option>
+              <option value="TENENCIA">Tenencia</option>
+              <option value="SUBCOMISARÍA">Subcomisaría</option>
             </select>
           </div>
-          <div class="form-group"><label class="form-label">Zona de Tratamiento Económico (%)</label><input type="number" class="form-control" name="crt_zona_trat" min="0" max="100"/></div>
-        </div>
-        <div class="form-row">
-          <div class="form-group"><label class="form-label">Tipo Comisaría</label>
-            <select class="form-control" name="crt_tipo_com">
-              <option value="MAYOR_TCOL">Mayor y Teniente Coronel</option>
-              <option value="SOLO_MAYOR">Solo Mayor</option>
-            </select>
-          </div>
-          <div class="form-group"><label class="form-label">Criticidad Operativa</label>
+          <div class="form-group">
+            <label class="form-label">Criticidad</label>
             <select class="form-control" name="crt_criticidad">
               <option value="ALTA">Alta</option>
               <option value="MEDIA">Media</option>
@@ -493,14 +440,26 @@
             </select>
           </div>
         </div>
-        <div style="font-family:'Oswald',sans-serif;font-weight:600;color:#1B5E20;margin:12px 0 8px;text-transform:uppercase;font-size:0.82rem;">Dotación Óptima por Cargo</div>
-        <div class="form-row-3">
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Zona tratamiento %</label><input type="number" class="form-control" name="crt_zona_trat" min="0" max="100" value="60"/></div>
+          <div class="form-group">
+            <label class="form-label">Tipo comisaría</label>
+            <select class="form-control" name="crt_tipo_com">
+              <option value="MAYOR_TCOL">Mayor o Tcol.</option>
+              <option value="SOLO_MAYOR">Solo Mayor</option>
+            </select>
+          </div>
+        </div>
+        <div style="font-size:0.78rem;font-weight:700;color:#263238;text-transform:uppercase;margin:12px 0 8px;letter-spacing:0.05em;">Dotación Óptima por Cargo</div>
+        <div class="form-row">
           <div class="form-group"><label class="form-label">Comisario</label><input type="number" class="form-control" name="crt_dot_com" min="0" value="0"/></div>
           <div class="form-group"><label class="form-label">Subcom. Servicios</label><input type="number" class="form-control" name="crt_dot_ss" min="0" value="0"/></div>
-          <div class="form-group"><label class="form-label">Subcom. Administrativo</label><input type="number" class="form-control" name="crt_dot_sa" min="0" value="0"/></div>
         </div>
         <div class="form-row">
+          <div class="form-group"><label class="form-label">Subcom. Administrativo</label><input type="number" class="form-control" name="crt_dot_sa" min="0" value="0"/></div>
           <div class="form-group"><label class="form-label">Jefe de Tenencia</label><input type="number" class="form-control" name="crt_dot_jt" min="0" value="0"/></div>
+        </div>
+        <div class="form-row">
           <div class="form-group"><label class="form-label">Oficial Operativo</label><input type="number" class="form-control" name="crt_dot_op" min="0" value="0"/></div>
         </div>
         <div class="form-row">
@@ -516,22 +475,173 @@
   </div>
 </div>
 
+<!-- Modal Ficha Oficial -->
+<div id="modal-ficha-oficial" class="modal-overlay">
+  <div class="modal" style="max-width:780px;">
+    <div class="modal-header">
+      <div class="modal-title">FICHA DEL OFICIAL</div>
+      <button class="modal-close" onclick="cerrarModal('modal-ficha-oficial')">✕</button>
+    </div>
+    <div class="modal-body" id="ficha-content"></div>
+  </div>
+</div>
+
+<!-- Modal Oficial CRUD -->
+<div id="modal-oficial" class="modal-overlay">
+  <div class="modal" style="max-width:700px;">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-oficial-title">OFICIAL</div>
+      <button class="modal-close" onclick="cerrarModal('modal-oficial')">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="form-oficial" onsubmit="return false;">
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Nombre completo *</label><input type="text" class="form-control" name="of_nombre" required/></div>
+          <div class="form-group"><label class="form-label">RUT</label><input type="text" class="form-control" name="of_rut" placeholder="12.345.678-9"/></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Grado *</label>
+            <select class="form-control" name="of_grado" required>
+              <option value="">— Seleccionar —</option>
+              <option value="SUBTENIENTE">Subteniente</option>
+              <option value="TENIENTE">Teniente</option>
+              <option value="CAPITAN">Capitán</option>
+              <option value="MAYOR">Mayor</option>
+              <option value="TENIENTE_CORONEL">Teniente Coronel</option>
+              <option value="CORONEL">Coronel</option>
+            </select>
+          </div>
+          <div class="form-group"><label class="form-label">Fecha ascenso a grado *</label><input type="date" class="form-control" name="of_fecha_ascenso" required/></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Especialidad Montaña o Frontera</label>
+            <select class="form-control" name="of_mof">
+              <option value="true">✅ Posee especialidad</option>
+              <option value="false">❌ Sin especialidad</option>
+            </select>
+          </div>
+          <div class="form-group"><label class="form-label">Año egreso Grupo de Montaña</label><input type="number" class="form-control" name="of_anio_grupo" placeholder="2020" min="1980" max="2030"/></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Cuartel asignado</label>
+            <select class="form-control" name="of_cuartel" id="of_cuartel">
+              <option value="">— Sin cuartel asignado —</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Cargo actual</label>
+            <select class="form-control" name="of_cargo">
+              <option value="">— Sin cargo —</option>
+              <option value="COMISARIO">Comisario</option>
+              <option value="SUBCOM_SERV">Subcomisario de Servicios</option>
+              <option value="SUBCOM_ADM">Subcomisario Administrativo</option>
+              <option value="JEFE_TEN">Jefe de Tenencia</option>
+              <option value="OF_OP">Oficial Operativo</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Fecha ingreso al cuartel</label><input type="date" class="form-control" name="of_fecha_ingreso"/></div>
+          <div class="form-group">
+            <label class="form-label">Estado</label>
+            <select class="form-control" name="of_estado">
+              <option value="ACTIVO">Activo</option>
+              <option value="PERFECCIONAMIENTO">Perfeccionamiento</option>
+              <option value="BAJA">Baja</option>
+              <option value="RETIRADO">Retirado</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Motivo fuera de frontera</label>
+            <select class="form-control" name="of_motivo_fuera">
+              <option value="">— Ninguno —</option>
+              <option value="ROTACION">Rotación normal</option>
+              <option value="PERFECCIONAMIENTO">Perfeccionamiento</option>
+              <option value="ASCENSO_SIN_CARGO">Ascenso sin cargo disponible</option>
+              <option value="MEDICO">Razones médicas</option>
+              <option value="FAMILIAR">Razones familiares/humanitarias</option>
+              <option value="DISCIPLINARIO">Razones disciplinarias</option>
+              <option value="SOLICITUD_PROPIA">Solicitud propia</option>
+              <option value="NECESIDAD_INST">Necesidad institucional</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">¿Puede volver?</label>
+            <select class="form-control" name="of_puede_volver">
+              <option value="SI">Sí</option>
+              <option value="CONDICIONAL">Condicional</option>
+              <option value="NO">No</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Fecha disponibilidad</label><input type="date" class="form-control" name="of_fecha_disp"/></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Inicio ACIPOL/Perfeccionamiento</label><input type="date" class="form-control" name="of_acipol_ini"/></div>
+          <div class="form-group"><label class="form-label">Retorno estimado</label><input type="date" class="form-control" name="of_acipol_ret"/></div>
+        </div>
+
+        <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--gris-claro);">
+          <div style="font-size:0.78rem;font-weight:700;color:#263238;text-transform:uppercase;margin-bottom:10px;letter-spacing:0.05em;">Formación académica</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:8px;margin-bottom:8px;align-items:end;">
+            <div class="form-group" style="margin:0;">
+              <label class="form-label">Tipo</label>
+              <select id="form-tipo" class="form-control">
+                <option value="Licenciatura">Licenciatura</option>
+                <option value="Magíster">Magíster</option>
+                <option value="Doctorado">Doctorado</option>
+                <option value="Diplomado">Diplomado</option>
+                <option value="Especialización">Especialización</option>
+                <option value="Técnico">Técnico</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin:0;"><label class="form-label">Título</label><input type="text" id="form-titulo" class="form-control" placeholder="Ej: Administración Pública"/></div>
+            <div class="form-group" style="margin:0;"><label class="form-label">Institución</label><input type="text" id="form-inst" class="form-control" placeholder="Universidad..."/></div>
+            <div class="form-group" style="margin:0;"><label class="form-label">Año</label><input type="number" id="form-anio" class="form-control" placeholder="2020" min="1970" max="2030"/></div>
+            <button type="button" class="btn btn-outline btn-sm" onclick="Oficiales.agregarFormacion()" style="margin-bottom:14px;">+</button>
+          </div>
+          <div id="formacion-lista"></div>
+        </div>
+
+        <div class="form-group" style="margin-top:14px;">
+          <label class="form-label">Observaciones</label>
+          <textarea class="form-control" name="of_observaciones" rows="3" placeholder="Anotaciones adicionales..."></textarea>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="cerrarModal('modal-oficial')">Cancelar</button>
+      <button class="btn btn-primary" onclick="Oficiales.guardar()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- ════════════════════════════════════════════════════════════
-     SCRIPTS
+     SCRIPTS (CORRECTAMENTE POSICIONADOS)
 ════════════════════════════════════════════════════════════ -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <script src="js/utils.js"></script>
+<script src="js/auth.js"></script>
 <script src="js/mapa.js"></script>
 <script src="js/dashboard.js"></script>
 <script src="js/cuarteles.js"></script>
 <script src="js/oficiales.js"></script>
-<script src="js/simulador.js"></script>
 <script src="js/planes.js"></script>
+<script src="js/fiscalizador.js"></script>
 
-// ── INIT ─────────────────────────────────────────────────────────
+<script>
+// ── FUNCIONES GLOBALES DE UI ──────────────────────────────────────
+
 function setBottomActive(el) {
   document.querySelectorAll('.bottom-nav-item').forEach(b => b.classList.remove('active'));
   if (el) el.classList.add('active');
@@ -542,22 +652,24 @@ function toggleSidebar() {
   const overlay = document.getElementById('sidebar-overlay');
   sidebar.classList.toggle('open');
   overlay.classList.toggle('open');
-  document.body.classList.toggle('sidebar-open');
 }
 
 function closeSidebarMobile() {
   if (window.innerWidth <= 768) {
-    const sidebar = document.querySelector('.sidebar');
-    const overlay = document.getElementById('sidebar-overlay');
-    sidebar.classList.remove('open');
-    overlay.classList.remove('open');
-    document.body.classList.remove('sidebar-open');
+    document.querySelector('.sidebar').classList.remove('open');
+    document.getElementById('sidebar-overlay').classList.remove('open');
   }
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
+// ── INICIALIZACIÓN ───────────────────────────────────────────────
+
+// Función llamada por Auth.mostrarApp() una vez autenticado
+window.appInit = async function() {
   actualizarFecha();
   setInterval(actualizarFecha, 60000);
+
+  // Inicializar mapa del dashboard
+  Mapa.initDashboard('mapa');
 
   // Cargar dashboard inicial
   await Dashboard.cargar();
@@ -566,85 +678,51 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.addEventListener('pageChanged', async ({ detail }) => {
     closeSidebarMobile();
     const { page } = detail;
-    if (page === 'cuarteles') await Cuarteles.cargar();
-    else if (page === 'oficiales') { await Oficiales.cargar(); initTabs('page-oficiales'); }
-    else if (page === 'bolsa') { await Oficiales.cargar(); }
-    else if (page === 'simulador') { await Simulador.cargar(); }
-    else if (page === 'planes') { await Planes.cargar(); }
-    else if (page === 'fiscalizador') { await cargarFiscalizador(); }
-    else if (page === 'mapa') {
+
+    if (page === 'cuarteles') {
+      await Cuarteles.cargar();
+
+    } else if (page === 'oficiales') {
+      await Oficiales.cargar();
+      initTabs('page-oficiales');
+
+    } else if (page === 'bolsa') {
+      await Oficiales.cargar();
+
+    } else if (page === 'simulador') {
+      await Simulador.cargar();
+
+    } else if (page === 'planes') {
+      await Planes.cargar();
+
+    } else if (page === 'fiscalizador') {
+      await Fiscalizador.cargar();
+
+    } else if (page === 'mapa') {
+      // CORREGIDO: inicializa mapa full con su propia instancia
       setTimeout(() => {
-        if (!window._mapaFull) {
-          window._mapaFull = L.map('mapa-full', { center:[-35.5,-71.0], zoom:5 });
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(window._mapaFull);
-          Mapa.map = window._mapaFull;
-        }
-        Mapa.renderizar(Dashboard.cuarteles, Dashboard.oficiales);
+        Mapa.initFull('mapa-full');
+        Mapa.renderizarFull(Dashboard.cuarteles, Dashboard.oficiales);
       }, 100);
     }
   });
+};
+
+// Arrancar autenticación
+document.addEventListener('DOMContentLoaded', () => {
+  Auth.init();
 });
 
-async function cargarFiscalizador() {
-  const [{ data:cuarteles },{ data:oficiales }] = await Promise.all([
-    sb.from('cuarteles').select('*').eq('activo',true).order('region'),
-    sb.from('oficiales').select('*').in('estado',['ACTIVO','PERFECCIONAMIENTO'])
-  ]);
-
-  const cont = document.getElementById('tabla-fisc-body');
-  if (cont) {
-    cont.innerHTML = (cuarteles||[]).map(c => {
-      const asignados = (oficiales||[]).filter(o=>o.cuartel_id===c.id&&o.estado==='ACTIVO');
-      const especialistas = asignados.filter(o=>o.especialidad_mof);
-      const optimo = (c.dot_comisario||0)+(c.dot_subcom_serv||0)+(c.dot_subcom_adm||0)+(c.dot_jefe_ten||0)+(c.dot_of_op||0);
-      const rotRegla = Utils.aniosRotacion(c.zona_trat_pct);
-      const pct = optimo>0?Math.round((asignados.length/optimo)*100):0;
-      let estado, color;
-      if (pct>=100&&especialistas.length===asignados.length) { estado='✅ Completo'; color='#E8F5E9'; }
-      else if (pct>0) { estado='⚠️ Parcial'; color='#FFFDE7'; }
-      else { estado='🔴 Sin dotación'; color='#FFEBEE'; }
-      return `<tr style="background:${color};">
-        <td style="font-weight:600;">${c.nombre}</td>
-        <td style="font-size:0.82rem;">${c.region}</td>
-        <td><span class="badge badge-${Utils.colorCriticidad(c.criticidad)}">${c.criticidad}</span></td>
-        <td style="text-align:center;font-weight:700;color:${Utils.colorZona(c.zona_trat_pct)};">${c.zona_trat_pct}%</td>
-        <td style="text-align:center;">${optimo}</td>
-        <td style="text-align:center;font-weight:700;">${asignados.length}</td>
-        <td style="text-align:center;"><span class="${especialistas.length===asignados.length&&asignados.length>0?'badge badge-verde':'badge badge-rojo'}">${especialistas.length}/${asignados.length}</span></td>
-        <td style="text-align:center;">${rotRegla} años</td>
-        <td>${estado}</td>
-      </tr>`;
-    }).join('');
+// Login con Enter
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && document.getElementById('login-screen').style.display !== 'none') {
+    Auth.login(
+      document.getElementById('login-email').value,
+      document.getElementById('login-password').value
+    );
   }
-
-  Charts.renderDashboard(cuarteles||[], oficiales||[]);
-  const ctx = document.getElementById('chart-dona-fisc');
-  if (ctx) {
-    const enF = (oficiales||[]).filter(o=>o.especialidad_mof&&o.cuartel_id&&o.estado==='ACTIVO').length;
-    const bol = (oficiales||[]).filter(o=>o.especialidad_mof&&(!o.cuartel_id||o.estado!=='ACTIVO')&&!['BAJA','RETIRADO'].includes(o.estado)).length;
-    const prf = (oficiales||[]).filter(o=>o.especialidad_mof&&o.estado==='PERFECCIONAMIENTO').length;
-    new Chart(ctx,{ type:'doughnut', data:{ labels:['En frontera','Bolsa','Perfeccionamiento'], datasets:[{ data:[enF,bol,prf], backgroundColor:['#2E7D32','#4CAF50','#F9A825'], borderWidth:2 }] }, options:{ responsive:true, plugins:{ legend:{ position:'bottom' } } } });
-  }
-}
+});
 </script>
-<!-- BOTTOM NAV (visible solo en móvil pequeño) -->
-<nav class="bottom-nav" id="bottom-nav">
-  <button class="bottom-nav-item active" data-page="dashboard" onclick="navegarA('dashboard');setBottomActive(this)">
-    <span class="bnav-icon">🏠</span>Dashboard
-  </button>
-  <button class="bottom-nav-item" data-page="cuarteles" onclick="navegarA('cuarteles');setBottomActive(this)">
-    <span class="bnav-icon">🏛️</span>Cuarteles
-  </button>
-  <button class="bottom-nav-item" data-page="oficiales" onclick="navegarA('oficiales');setBottomActive(this)">
-    <span class="bnav-icon">👮</span>Oficiales
-  </button>
-  <button class="bottom-nav-item" data-page="simulador" onclick="navegarA('simulador');setBottomActive(this)">
-    <span class="bnav-icon">⚡</span>Simular
-  </button>
-  <button class="bottom-nav-item" onclick="toggleSidebar()">
-    <span class="bnav-icon">☰</span>Más
-  </button>
-</nav>
 
 </body>
 </html>
